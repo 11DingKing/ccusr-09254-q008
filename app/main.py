@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from fastapi import FastAPI
 
+from .queue.router import router as queue_router
 from .routers import router
 
 app = FastAPI(
@@ -17,6 +18,7 @@ app = FastAPI(
 )
 
 app.include_router(router)
+app.include_router(queue_router)
 
 
 @app.get("/health", tags=["meta"])

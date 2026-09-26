@@ -138,3 +138,76 @@ class DiffOut(BaseModel):
     new_event_cutoff_id: str | None
     student_changes: list[dict[str, Any]]
     students_affected: int
+
+
+class QueueRuleIn(BaseModel):
+    graduating_weight: float = Field(..., ge=0)
+    materials_weight: float = Field(..., ge=0)
+    aging_per_hour: float = Field(..., ge=0)
+
+
+class QueueRuleOut(BaseModel):
+    rule_version: int
+    graduating_weight: float
+    materials_weight: float
+    aging_per_hour: float
+    is_active: bool
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class QueueEnqueueIn(BaseModel):
+    student_id: str = Field(..., min_length=1, max_length=128)
+    request_type: str = Field("backfill", min_length=1, max_length=64)
+    is_graduating: bool = False
+    materials_ready: bool = False
+    payload: dict[str, Any] = Field(default_factory=dict)
+
+
+class QueueClaimIn(BaseModel):
+    worker_id: str = Field(..., min_length=1, max_length=128)
+    lease_seconds: int | None = Field(None, ge=1, le=86400)
+
+
+class QueueLeaseIn(BaseModel):
+    lease_token: str = Field(..., min_length=1, max_length=64)
+    lease_seconds: int | None = Field(None, ge=1, le=86400)
+
+
+class QueueReturnIn(BaseModel):
+    lease_token: str = Field(..., min_length=1, max_length=64)
+    reason: str | None = Field(None, max_length=256)
+
+
+class QueueItemOut(BaseModel):
+    id: int
+    student_id: str
+    request_type: str
+    is_graduating: bool
+    materials_ready: bool
+    status: str
+    enqueued_at: datetime
+    effective_since: datetime
+    waited_hours: float
+    score: float
+    rule_version: int
+    rule_version_at_enqueue: int
+    attempts: int
+    last_return_reason: str | None
+    lease_owner: str | None
+    lease_token: str | None = None
+    lease_expires_at: datetime | None
+    completed_at: datetime | None
+    payload: dict[str, Any]
+
+
+class QueueStatsOut(BaseModel):
+    rule_version: int
+    generated_at: datetime
+    waiting: int
+    leased: int
+    expired_leases: int
+    completed: int
+    total: int
+    next_item_id: int | None

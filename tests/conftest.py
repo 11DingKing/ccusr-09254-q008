@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.db import get_db
@@ -14,6 +14,16 @@ test_engine = create_engine(
     "sqlite:///./practice_hours_test.db",
     connect_args={"check_same_thread": False, "timeout": 30},
 )
+
+
+@event.listens_for(test_engine, "connect")
+def _set_sqlite_pragmas(dbapi_conn, _record) -> None:
+    cursor = dbapi_conn.cursor()
+    try:
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.execute("PRAGMA busy_timeout=30000")
+    finally:
+        cursor.close()
 TestSessionLocal = sessionmaker(bind=test_engine, autoflush=False, autocommit=False, future=True)
 
 @pytest.fixture(autouse=True)
