@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 
+from . import queue_services
+from .core.workqueue import QueueError
 from .routers import router
 
 app = FastAPI(
@@ -17,6 +20,26 @@ app = FastAPI(
 )
 
 app.include_router(router)
+
+
+@app.exception_handler(queue_services.ItemNotFoundError)
+@app.exception_handler(queue_services.RuleNotFoundError)
+@app.exception_handler(queue_services.QueueEmptyError)
+async def queue_not_found_handler(request: Request, exc: Exception) -> JSONResponse:
+    return JSONResponse(status_code=404, content={"detail": str(exc)})
+
+
+@app.exception_handler(queue_services.NoActiveRuleError)
+@app.exception_handler(queue_services.ItemExistsError)
+@app.exception_handler(queue_services.RuleConflictError)
+@app.exception_handler(queue_services.LeaseConflictError)
+async def queue_conflict_handler(request: Request, exc: Exception) -> JSONResponse:
+    return JSONResponse(status_code=409, content={"detail": str(exc)})
+
+
+@app.exception_handler(QueueError)
+async def queue_domain_handler(request: Request, exc: Exception) -> JSONResponse:
+    return JSONResponse(status_code=422, content={"detail": str(exc)})
 
 
 @app.get("/health", tags=["meta"])

@@ -138,3 +138,92 @@ class DiffOut(BaseModel):
     new_event_cutoff_id: str | None
     student_changes: list[dict[str, Any]]
     students_affected: int
+
+
+class QueueRuleIn(BaseModel):
+    rule_id: str = Field(..., min_length=1, max_length=128)
+    graduating_weight: float = Field(100.0, ge=0)
+    materials_weight: float = Field(40.0, ge=0)
+    aging_weight_per_hour: float = Field(5.0, ge=0)
+    aging_cap: float | None = Field(None, ge=0)
+
+
+class QueueRuleOut(BaseModel):
+    rule_id: str
+    version: int
+    graduating_weight: float
+    materials_weight: float
+    aging_weight_per_hour: float
+    aging_cap: float | None
+    active: bool
+    created_at: datetime
+
+
+class QueueEnqueueIn(BaseModel):
+    request_id: str = Field(..., min_length=1, max_length=128)
+    student_id: str = Field(..., min_length=1, max_length=128)
+    graduating: bool = False
+    materials_complete: bool = False
+    note: str = Field("", max_length=512)
+
+
+class QueueItemOut(BaseModel):
+    request_id: str
+    student_id: str
+    state: str
+    graduating: bool
+    materials_complete: bool
+    note: str
+    enqueued_at: datetime
+    wait_anchor: datetime
+    wait_seconds: float
+    score: float | None
+    lease_owner: str | None
+    lease_expires_at: datetime | None
+    return_count: int
+    last_return_reason: str | None
+    completed_at: datetime | None
+    updated_at: datetime
+
+
+class QueueClaimIn(BaseModel):
+    worker_id: str = Field(..., min_length=1, max_length=128)
+    lease_seconds: int = Field(300, gt=0, le=86400)
+
+
+class QueueClaimOut(BaseModel):
+    item: QueueItemOut
+    lease_token: str
+    lease_expires_at: datetime
+
+
+class QueueRenewIn(BaseModel):
+    lease_token: str = Field(..., min_length=1, max_length=64)
+    lease_seconds: int = Field(300, gt=0, le=86400)
+
+
+class QueueReturnIn(BaseModel):
+    lease_token: str = Field(..., min_length=1, max_length=64)
+    reason: str = Field("", max_length=512)
+
+
+class QueueCompleteIn(BaseModel):
+    lease_token: str = Field(..., min_length=1, max_length=64)
+
+
+class QueuePreviewOut(BaseModel):
+    now: datetime
+    items: list[QueueItemOut]
+
+
+class QueueStatsOut(BaseModel):
+    generated_at: datetime
+    active_rule: QueueRuleOut | None
+    pending: int
+    leased: int
+    completed: int
+    claimable: int
+    expired_leases: int
+    total_returns: int
+    oldest_wait_seconds: float | None
+    average_wait_seconds: float | None
